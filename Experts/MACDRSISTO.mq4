@@ -64,9 +64,9 @@ void OnTick()
    double RSICurrent, ADICurrent, StoBaseCurrent, StoSignalCurrent;
    double StoBasePrevious, StoSignalPrevious;
    int    cnt,ticket,total;
-   double recommendation = 0.0;
-   int    indicator = 0;
+   double recommendation = 0.0 , indicator = 0;
    
+  
    if(Bars<100)
      {
       Print("bars less than 100");
@@ -290,13 +290,31 @@ double CalculateSTORecommendation(double k){
    return rec;
 }
 
-int CalculateSTOIndicator(double k, double kPrevious, double d, double dPrevious){
-   int ind = 0;
+double CalculateSTOIndicator(double k, double kPrevious, double d, double dPrevious){
+   double ind = 0;
    if (k > d && kPrevious <= dPrevious){
          ind = 1;
-   } else if (k <= d && kPrevious > dPrevious){
+   }    
+   else if(k > d && kPrevious > dPrevious && k > kPrevious)
+   {
+      ind = 0.75;    
+   }
+   else if(k > d && kPrevious > dPrevious && k < kPrevious)
+   {
+      ind = 0.25;      
+   }
+   else if (k <= d && kPrevious > dPrevious){
          ind = -1;
-   } else {
+   } 
+   else if(k < d && kPrevious < dPrevious && k > kPrevious)
+   {
+      ind = -0.25;     
+   }
+   else if(k < d && kPrevious < dPrevious && k < kPrevious)
+   {
+      ind = -0.75;      
+   }  
+   else {
          ind = 0;
    }
    return ind;
@@ -315,13 +333,36 @@ double CalculateMACDRecommendation(double MacdOpenLevel, double MacdCloseLevel, 
    return rec;   
 }
 
-int CalculateMACDIndicator(double MacdHistCurrent, double MacdHistPrevious){
-   int ind = 0;
-   if (MacdHistCurrent  > 0 && MacdHistPrevious <= 0){
+double CalculateMACDIndicator(double MacdHistCurrent, double MacdHistPrevious){
+   double ind = 0;
+   if (MacdHistCurrent  > 0 && MacdHistPrevious <= 0)
+      {
          ind = 1;
-   } else if (MacdHistCurrent <= 0 && MacdHistPrevious > 0){
+      } 
+   
+   else if(MacdHistCurrent  > 0 && MacdHistPrevious > 0 && MacdHistCurrent > MacdHistPrevious)
+      {
+          ind = 0.75;            
+      }
+   else if(MacdHistCurrent  > 0 && MacdHistPrevious > 0 && MacdHistCurrent <= MacdHistPrevious)
+      {
+          ind = 0.25;
+            
+      }
+   else if (MacdHistCurrent <= 0 && MacdHistPrevious > 0){
          ind = -1;
-   } else {
+   } 
+   
+   else if(MacdHistCurrent  <= 0 && MacdHistPrevious <= 0 && MacdHistCurrent > MacdHistPrevious)
+      {
+          ind = -0.25;
+            
+      }
+   else if(MacdHistCurrent  <= 0 && MacdHistPrevious <= 0 && MacdHistCurrent <= MacdHistPrevious)
+      {
+          ind = 0.75;;         
+      }   
+   else {
          ind = 0;
    }
    return ind;
