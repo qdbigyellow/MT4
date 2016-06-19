@@ -303,7 +303,15 @@ int CalculateSTOIndicator(double k, double kPrevious, double d, double dPrevious
 }
 
 double CalculateMACDRecommendation(double MacdOpenLevel, double MacdCloseLevel, double Macd){
-   double rec = Macd - MacdOpenLevel * Point;
+   double rec = (Macd - (MacdOpenLevel * Point)) / ((MacdOpenLevel * Point) * 10);
+   if(rec > 1)
+     {
+         rec = 1;
+     }
+   else if(rec < - 1)
+     {
+         rec = -1;
+     }     
    return rec;   
 }
 
