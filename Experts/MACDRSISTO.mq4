@@ -3,6 +3,16 @@
 //|                        Copyright 2016, MetaQuotes Software Corp. |
 //|                                             https://www.mql5.com |
 //+------------------------------------------------------------------+
+
+//+------------------------------------------------------------------+
+//|Expert strategy:                                                  |
+//|    When MACD trade signal happen, chekc RSI, and STO status      |
+//|    When STO trade signal happen, check RSI and MACD              |
+//|    Always create Trailing stop together.                         |
+//+------------------------------------------------------------------+
+
+
+
 #property copyright "Copyright 2016, MetaQuotes Software Corp."
 #property link      "https://www.mql5.com"
 #property version   "1.00"
@@ -55,6 +65,7 @@ void OnTick()
    double StoBasePrevious, StoSignalPrevious;
    int    cnt,ticket,total;
    double recommendation = 0.0;
+   int    indicator = 0;
    
    if(Bars<100)
      {
@@ -97,11 +108,18 @@ void OnTick()
         }
       
       //--- Calculation the recommendation ---
-      recommendation = CalculateRecommendation(RSICurrent, StoBaseCurrent, StoBasePrevious, StoSignalCurrent, StoSignalPrevious);
+      double rsi_rec = CalculateRSIRecommentdation(RSICurrent);
+      double sto_rec = CalculateSTORecommendation(StoBaseCurrent);
+      double macd_rec = CalculateMACDRecommendation(MACDOpenLevel, MACDCloseLevel, MacdCurrent);
+      
+      recommendation = CalculateRecommendation(rsi_rec, sto_rec, macd_rec); 
+      
+      indicator = CalculateMACDIndicator(MacdHistCurrent, MacdHistPrevious) + CalculateSTOIndicator(StoBaseCurrent, StoBasePrevious, StoSignalCurrent, StoSignalPrevious);
       
       //--- check for long position (BUY) possibility
-      if(MacdCurrent<0 && MacdCurrent>SignalCurrent && MacdPrevious<SignalPrevious && 
-         MathAbs(MacdCurrent)>(MACDOpenLevel*Point) && MaCurrent>MaPrevious)
+      //if(MacdCurrent<0 && MacdCurrent>SignalCurrent && MacdPrevious<SignalPrevious && 
+      //   MathAbs(MacdCurrent)>(MACDOpenLevel*Point) && MaCurrent>MaPrevious)
+      if ( indicator >= 1 && recommendation > 0)
         {
          ticket=OrderSend(Symbol(),OP_BUY,Lots,Ask,3,0,Ask+TakeProfit*Point,"macd sample",16384,0,Green);
          if(ticket>0)
@@ -114,8 +132,9 @@ void OnTick()
          return;
         }
       //--- check for short position (SELL) possibility
-      if(MacdCurrent>0 && MacdCurrent<SignalCurrent && MacdPrevious>SignalPrevious && 
-         MacdCurrent>(MACDOpenLevel*Point) && MaCurrent<MaPrevious)
+      //if(MacdCurrent>0 && MacdCurrent<SignalCurrent && MacdPrevious>SignalPrevious && 
+      //   MacdCurrent>(MACDOpenLevel*Point) && MaCurrent<MaPrevious)
+      if(indicator <= -1 && recommendation <= 0)
         {
          ticket=OrderSend(Symbol(),OP_SELL,Lots,Bid,3,0,Bid-TakeProfit*Point,"macd sample",16384,0,Red);
          if(ticket>0)
@@ -130,10 +149,73 @@ void OnTick()
       return;
      }
 
-   
 
-   
-   
+//--- it is important to enter the market correctly, but it is more important to exit it correctly...   
+   for(cnt=0;cnt<total;cnt++)
+     {
+      if(!OrderSelect(cnt,SELECT_BY_POS,MODE_TRADES))
+         continue;
+      if(OrderType()<=OP_SELL &&   // check for opened position 
+         OrderSymbol()==Symbol())  // check for symbol
+        {
+         //--- long position is opened
+         if(OrderType()==OP_BUY)
+           {
+            //--- should it be closed?
+            //if(MacdCurrent>0 && MacdCurrent<SignalCurrent && MacdPrevious>SignalPrevious && 
+            //   MacdCurrent>(MACDCloseLevel*Point))
+            
+            if( indicator <= -1 && recommendation <= 0)
+              {
+               //--- close order and exit
+               if(!OrderClose(OrderTicket(),OrderLots(),Bid,3,Violet))
+                  Print("OrderClose error ",GetLastError());
+               return;
+              }
+            //--- check for trailing stop
+            if(TrailingStop>0)
+              {
+               if(Bid-OrderOpenPrice()>Point*TrailingStop)
+                 {
+                  if(OrderStopLoss()<Bid-Point*TrailingStop)
+                    {
+                     //--- modify order and exit
+                     if(!OrderModify(OrderTicket(),OrderOpenPrice(),Bid-Point*TrailingStop,OrderTakeProfit(),0,Green))
+                        Print("OrderModify error ",GetLastError());
+                     return;
+                    }
+                 }
+              }
+           }
+         else // go to short position
+           {
+            //--- should it be closed?
+            //if(MacdCurrent<0 && MacdCurrent>SignalCurrent && 
+            //   MacdPrevious<SignalPrevious && MathAbs(MacdCurrent)>(MACDCloseLevel*Point))
+            if (indicator > 0 && recommendation > 0.5)            
+              {
+               //--- close order and exit
+               if(!OrderClose(OrderTicket(),OrderLots(),Ask,3,Violet))
+                  Print("OrderClose error ",GetLastError());
+               return;
+              }
+            //--- check for trailing stop
+            if(TrailingStop>0)
+              {
+               if((OrderOpenPrice()-Ask)>(Point*TrailingStop))
+                 {
+                  if((OrderStopLoss()>(Ask+Point*TrailingStop)) || (OrderStopLoss()==0))
+                    {
+                     //--- modify order and exit
+                     if(!OrderModify(OrderTicket(),OrderOpenPrice(),Ask+Point*TrailingStop,OrderTakeProfit(),0,Red))
+                        Print("OrderModify error ",GetLastError());
+                     return;
+                    }
+                 }
+              }
+           }
+        }
+     }   
   }
 //+------------------------------------------------------------------+
 //| Timer function                                                   |
@@ -172,11 +254,9 @@ void OnChartEvent(const int id,
 //+------------------------------------------------------------------+
 //| Calculate Recommendation                                              |
 //+------------------------------------------------------------------+
-double CalculateRecommendation(double rsi, double k, double kPrevious, double d, double dPrevious){
-   
-   
-
-   return 0.0;
+double CalculateRecommendation(double rsi, double sto, double macd){
+   double rec = (rsi + sto + macd) / 3;
+   return rec;
 }
 
 
@@ -210,14 +290,31 @@ double CalculateSTORecommendation(double k){
    return rec;
 }
 
-double CalculateSTOIndicator(double k, double kPrevious, double d, double dPrevious){
-   double ind = 0;
+int CalculateSTOIndicator(double k, double kPrevious, double d, double dPrevious){
+   int ind = 0;
    if (k > d && kPrevious <= dPrevious){
          ind = 1;
    } else if (k <= d && kPrevious > dPrevious){
          ind = -1;
-   } else if (k > d && kPrevious > dPrevious && k-d > kPrevious-dPrevious){
-         ind = 2;
+   } else {
+         ind = 0;
+   }
+   return ind;
+}
+
+double CalculateMACDRecommendation(double MacdOpenLevel, double MacdCloseLevel, double Macd){
+   double rec = Macd - MacdOpenLevel * Point;
+   return rec;   
+}
+
+int CalculateMACDIndicator(double MacdHistCurrent, double MacdHistPrevious){
+   int ind = 0;
+   if (MacdHistCurrent  > 0 && MacdHistPrevious <= 0){
+         ind = 1;
+   } else if (MacdHistCurrent <= 0 && MacdHistPrevious > 0){
+         ind = -1;
+   } else {
+         ind = 0;
    }
    return ind;
 }
