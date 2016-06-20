@@ -78,6 +78,8 @@ void OnTick()
       return;
      }
      
+   Print("Start check trading condition");  
+     
    MacdCurrent=iMACD(NULL,0,12,26,9,PRICE_CLOSE,MODE_MAIN,0);
    MacdPrevious=iMACD(NULL,0,12,26,9,PRICE_CLOSE,MODE_MAIN,1);
    SignalCurrent=iMACD(NULL,0,12,26,9,PRICE_CLOSE,MODE_SIGNAL,0);
@@ -255,6 +257,9 @@ void OnChartEvent(const int id,
 //| Calculate Recommendation                                              |
 //+------------------------------------------------------------------+
 double CalculateRecommendation(double rsi, double sto, double macd){
+   Print("RSI is ",rsi);
+   Print("STO(K) is ", sto);
+   Print("MACD is ", macd); 
    double rec = (rsi + sto + macd) / 3;
    return rec;
 }
@@ -317,6 +322,7 @@ double CalculateSTOIndicator(double k, double kPrevious, double d, double dPrevi
    else {
          ind = 0;
    }
+   printf("STO indicator is %d\n", ind);
    return ind;
 }
 
@@ -365,5 +371,6 @@ double CalculateMACDIndicator(double MacdHistCurrent, double MacdHistPrevious){
    else {
          ind = 0;
    }
+   printf("MACD indicator is %d\n", ind);
    return ind;
 }
