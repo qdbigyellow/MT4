@@ -18,10 +18,10 @@
 #property version   "1.00"
 #property strict
 //--- input parameters
-input double   TakeProfit=50.0;
-input double   Lots=0.1;
-input double   TrailingStop=10.0;
-input double   StopLoss = 10.0;
+input double   TakeProfit=60.0;
+input double   Lots=1;
+input double   TrailingStop=20.0;
+input double   StopLoss = 40.0;
 input int      MaxOpenPosition = 2;
 input double   MACDOpenLevel=3.0;
 input double   MACDCloseLevel=2.0;
@@ -63,10 +63,14 @@ void OnTick()
    double SignalCurrent,SignalPrevious;
    double MacdHistCurrent, MacdHistPrevious;
    double MaCurrent,MaPrevious;
-   double RSICurrent, ADICurrent, StoBaseCurrent, StoSignalCurrent;
-   double StoBasePrevious, StoSignalPrevious;
+   double RSICurrent; //, ADICurrent, StoBaseCurrent, StoSignalCurrent;
+   //double StoBasePrevious, StoSignalPrevious;
    int    cnt,ticket,total;
    double recommendation = 0.0 , indicator = 0;
+   double band1upper_0, band1upper_1, band1upper_2; // 1 diviation upper line -0 -1 -2 day
+   double band1lower_0, band1lower_1, band1lower_2; // 1 diviation lower line -0 -1 -2 day
+   double band2upper_0, band2upper_1, band2upper_2; // 2 diviation upper line -0 -1 -2 day
+   double band2lower_0, band2lower_1, band2lower_2; // 2 diviation lower line -0 -1 -2 day
    
   
    if(Bars<100)
@@ -93,13 +97,29 @@ void OnTick()
    MaPrevious=iMA(NULL,0,MATrendPeriod,0,MODE_EMA,PRICE_CLOSE,1);
    
    RSICurrent = iRSI(NULL, 0, RSIPeriod, PRICE_CLOSE, 0);
-   ADICurrent = iADX(NULL, 0, ADIPeriod, PRICE_CLOSE, 0, 0);
-   StoBaseCurrent = iStochastic(NULL, 0, 5, 3, 3, MODE_SMA, 1, MODE_MAIN, 0);
-   StoSignalCurrent = iStochastic(NULL, 0, 5, 3, 3, MODE_SMA, 1, MODE_SIGNAL, 0);
-   StoBasePrevious = iStochastic(NULL, 0, 5, 3, 3, MODE_SMA, 1, MODE_MAIN, 1);
-   StoSignalPrevious = iStochastic(NULL, 0, 5, 3, 3, MODE_SMA, 1, MODE_SIGNAL, 1);
+   //ADICurrent = iADX(NULL, 0, ADIPeriod, PRICE_CLOSE, 0, 0);
+   //StoBaseCurrent = iStochastic(NULL, 0, 5, 3, 3, MODE_SMA, 1, MODE_MAIN, 0);
+   //StoSignalCurrent = iStochastic(NULL, 0, 5, 3, 3, MODE_SMA, 1, MODE_SIGNAL, 0);
+   //StoBasePrevious = iStochastic(NULL, 0, 5, 3, 3, MODE_SMA, 1, MODE_MAIN, 1);
+   //StoSignalPrevious = iStochastic(NULL, 0, 5, 3, 3, MODE_SMA, 1, MODE_SIGNAL, 1);
    
+   band1upper_0 = iBands(NULL,0,20, 1,0,PRICE_CLOSE,MODE_UPPER,0);
+   band1upper_1 = iBands(NULL,0,20, 1,0,PRICE_CLOSE,MODE_UPPER,1);
+   band1upper_2 = iBands(NULL,0,20, 1,0,PRICE_CLOSE,MODE_UPPER,2);
    
+   band1lower_0 = iBands(NULL,0,20, 1,0,PRICE_CLOSE,MODE_LOWER,0);
+   band1lower_1 = iBands(NULL,0,20, 1,0,PRICE_CLOSE,MODE_LOWER,1);
+   band1lower_2 = iBands(NULL,0,20, 1,0,PRICE_CLOSE,MODE_LOWER,2);
+   
+   band2upper_0 = iBands(NULL,0,20, 2,0,PRICE_CLOSE,MODE_UPPER,0);
+   band2upper_1 = iBands(NULL,0,20, 2,0,PRICE_CLOSE,MODE_UPPER,1);
+   band2upper_2 = iBands(NULL,0,20, 2,0,PRICE_CLOSE,MODE_UPPER,2);
+   
+   band2lower_0 = iBands(NULL,0,20, 2,0,PRICE_CLOSE,MODE_LOWER,0);
+   band2lower_1 = iBands(NULL,0,20, 2,0,PRICE_CLOSE,MODE_LOWER,1);
+   band2lower_2 = iBands(NULL,0,20, 2,0,PRICE_CLOSE,MODE_LOWER,2);
+   
+      
    total=OrdersTotal();
    
       if(total<MaxOpenPosition)
@@ -112,20 +132,13 @@ void OnTick()
         }
       
       //--- Calculation the recommendation ---
-      double rsi_rec = CalculateRSIRecommentdation(RSICurrent);
-      double sto_rec = CalculateSTORecommendation(StoBaseCurrent);
-      double macd_rec = CalculateMACDRecommendation(MACDOpenLevel, MACDCloseLevel, MacdCurrent);
-      
-      recommendation = CalculateRecommendation(rsi_rec, sto_rec, macd_rec); 
-      
-      indicator = CalculateMACDIndicator(MacdHistCurrent, MacdHistPrevious) + CalculateSTOIndicator(StoBaseCurrent, StoBasePrevious, StoSignalCurrent, StoSignalPrevious);
       
       //--- check for long position (BUY) possibility
       //if(MacdCurrent<0 && MacdCurrent>SignalCurrent && MacdPrevious<SignalPrevious && 
       //   MathAbs(MacdCurrent)>(MACDOpenLevel*Point) && MaCurrent>MaPrevious)
-      if ( indicator >= 1 && recommendation > 0)
+      if (toLong(band1upper_0,band1upper_1, band1upper_2,band2upper_0,band2upper_1,band2upper_2,RSI_buy(RSICurrent)))
         {
-         ticket=OrderSend(Symbol(),OP_BUY,Lots,Ask, 3.0, Ask-StopLoss*Point ,Ask+TakeProfit*Point,"macd sample",16384,0,Green);
+         ticket=OrderSend(Symbol(),OP_BUY,Lots, Ask, 3.0, iLow(NULL,0,2) ,Ask+TakeProfit*Point,"macd sample",16384,0,Green);
          if(ticket>0)
            {
             if(OrderSelect(ticket,SELECT_BY_TICKET,MODE_TRADES))
@@ -138,9 +151,9 @@ void OnTick()
       //--- check for short position (SELL) possibility
       //if(MacdCurrent>0 && MacdCurrent<SignalCurrent && MacdPrevious>SignalPrevious && 
       //   MacdCurrent>(MACDOpenLevel*Point) && MaCurrent<MaPrevious)
-      if(indicator <= -1 && recommendation < -0.5)  // Conservative when Short
+      if(toShort(band1lower_0,band1lower_1, band1lower_2,band2lower_0,band2lower_1,band2lower_2, RSI_sell(RSICurrent)))  // Conservative when Short
         {
-         ticket=OrderSend(Symbol(),OP_SELL,Lots,Bid,3.0,Ask+StopLoss*Point ,Bid- TakeProfit*Point,"macd sample",16384,0,Red);
+         ticket=OrderSend(Symbol(),OP_SELL,Lots,Bid,3.0,iHigh(NULL,0,2), Bid-TakeProfit*Point,"macd sample",16384,0,Red);
          if(ticket>0)
            {
             if(OrderSelect(ticket,SELECT_BY_TICKET,MODE_TRADES))
@@ -169,7 +182,7 @@ void OnTick()
             //if(MacdCurrent>0 && MacdCurrent<SignalCurrent && MacdPrevious>SignalPrevious && 
             //   MacdCurrent>(MACDCloseLevel*Point))
             
-            if( indicator <= -1 && recommendation <= 0)
+            if( toShort(band1lower_0,band1lower_1, band1lower_2,band2lower_0,band2lower_1,band2lower_2, RSI_sell(RSICurrent)))
               {
                //--- close order and exit
                if(!OrderClose(OrderTicket(),OrderLots(),Bid,3,Violet))
@@ -196,7 +209,7 @@ void OnTick()
             //--- should it be closed?
             //if(MacdCurrent<0 && MacdCurrent>SignalCurrent && 
             //   MacdPrevious<SignalPrevious && MathAbs(MacdCurrent)>(MACDCloseLevel*Point))
-            if (indicator > 0 && recommendation > 0.5)            
+            if (toLong(band1upper_0,band1upper_1, band1upper_2,band2upper_0,band2upper_1,band2upper_2,RSI_buy(RSICurrent)))            
               {
                //--- close order and exit
                if(!OrderClose(OrderTicket(),OrderLots(),Ask,3,Violet))
@@ -258,121 +271,31 @@ void OnChartEvent(const int id,
 //+------------------------------------------------------------------+
 //| Calculate Recommendation                                              |
 //+------------------------------------------------------------------+
-double CalculateRecommendation(double rsi, double sto, double macd){
-   Print("RSI is ",rsi);
-   Print("STO(K) is ", sto);
-   Print("MACD is ", macd); 
-   double rec = (rsi + sto + macd) / 3;
-   return rec;
+
+
+bool RSI_buy(double rsi){
+   return (rsi < 70);
+   //return true;
 }
 
-
-double CalculateRSIRecommentdation(double rsi){
-    int rsi_lower = 30;
-    int rsi_upper = 70;
-    double rec = 0.0;
-
-    if (rsi < rsi_lower)
-        rec = 1;    
-    else if (rsi > rsi_upper)
-        rec = -1;          
-    else
-        rec = (rsi - rsi_lower) / (rsi_upper - rsi_lower) * -2  + 1   ;              
-    return rec;
+bool RSI_sell(double rsi){
+   return (rsi>30);
+   //return true;
 }
 
-
-double CalculateSTORecommendation(double k){
-   int k_low = 20;
-   int k_high = 80;
-   double rec = 0.0;
-      
-   if (k >= k_high) {
-      rec = -1;   
-   } else if(k <= k_low){
-      rec = 1;
-   } else{
-      rec = (k - k_low) / (k_high - k_low) * -2  + 1;
-   }
-   return rec;
+bool Macd_ind(double macd){
+   return MathAbs(macd)>(MACDOpenLevel*Point); 
 }
 
-double CalculateSTOIndicator(double k, double kPrevious, double d, double dPrevious){
-   double ind = 0;
-   if (k > d && kPrevious <= dPrevious){
-         ind = 1;
-   }    
-   else if(k > d && kPrevious > dPrevious && k > kPrevious)
-   {
-      ind = 0.75;    
-   }
-   else if(k > d && kPrevious > dPrevious && k < kPrevious)
-   {
-      ind = 0.25;      
-   }
-   else if (k <= d && kPrevious > dPrevious){
-         ind = -1;
-   } 
-   else if(k < d && kPrevious < dPrevious && k > kPrevious)
-   {
-      ind = -0.25;     
-   }
-   else if(k < d && kPrevious < dPrevious && k < kPrevious)
-   {
-      ind = -0.75;      
-   }  
-   else {
-         ind = 0;
-   }
-   printf("STO indicator is %d\n", ind);
-   return ind;
+bool toLong(double b1h_0, double b1h_1, double b1h_2, double b2h_0, double b2h_1, double b2h_2, bool rsi){
+   return (iClose(NULL,0,2) <= b1h_2 && iClose(NULL,0,1) > b1h_1 && (iClose(NULL,0,0) - b1h_0 >= 10 * Point) && 
+           iClose(NULL,0,1) < b2h_1 && iClose(NULL,0,0) < b2h_0  && 
+           rsi   
+   );   
 }
 
-double CalculateMACDRecommendation(double MacdOpenLevel, double MacdCloseLevel, double Macd){
-   double rec = (Macd - (MacdOpenLevel * Point)) / ((MacdOpenLevel * Point) * 10);
-   if(rec > 1)
-     {
-         rec = 1;
-     }
-   else if(rec < - 1)
-     {
-         rec = -1;
-     }     
-   return rec;   
-}
-
-double CalculateMACDIndicator(double MacdHistCurrent, double MacdHistPrevious){
-   double ind = 0;
-   if (MacdHistCurrent  > 0 && MacdHistPrevious <= 0)
-      {
-         ind = 1;
-      } 
-   
-   else if(MacdHistCurrent  > 0 && MacdHistPrevious > 0 && MacdHistCurrent > MacdHistPrevious)
-      {
-          ind = 0.75;            
-      }
-   else if(MacdHistCurrent  > 0 && MacdHistPrevious > 0 && MacdHistCurrent <= MacdHistPrevious)
-      {
-          ind = 0.25;
-            
-      }
-   else if (MacdHistCurrent <= 0 && MacdHistPrevious > 0){
-         ind = -1;
-   } 
-   
-   else if(MacdHistCurrent  <= 0 && MacdHistPrevious <= 0 && MacdHistCurrent > MacdHistPrevious)
-      {
-          ind = -0.25;
-            
-      }
-   else if(MacdHistCurrent  <= 0 && MacdHistPrevious <= 0 && MacdHistCurrent <= MacdHistPrevious)
-      {
-          ind = 0.75;;         
-      }   
-   else {
-         ind = 0;
-   }
-   printf("MACD indicator is %d\n", ind);
-   return ind;
+bool toShort(double b1l_0, double b1l_1, double b1l_2, double b2l_0, double b2l_1, double b2l_2, bool rsi){
+   return (iClose(NULL,0,2) >= b1l_2 && iClose(NULL,0,1) < b1l_1 && (b1l_0 - iClose(NULL,0,0)>= 10 * Point) && 
+           iClose(NULL,0,1) > b2l_1 && iClose(NULL,0,0) > b2l_0 &&   
+           rsi);   
 }
