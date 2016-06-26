@@ -31,6 +31,7 @@ input int      MAFastEMAPeriod=12;
 input int      MAShort = 10;
 input int      MAMid = 20;
 input int      MALong = 50;
+input int      MAVeryLong = 100;
 input int      RSIPeriod=14;
 input int      ADIPeriod=14;
 input int      KPeriod = 5;
@@ -39,7 +40,7 @@ input int      JPeriod = 3;
 input int      PowerPeriod = 13;
 input int      DDBTimeFrame = PERIOD_H1;
 input int      INDICATORTimeFrame = PERIOD_H1;
-input int      INDICATORPeriod = 5;
+input int      INDICATORPeriod = 6;
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
@@ -68,10 +69,20 @@ void OnTick()
   {
 //---
    // Cannot use variable to define the array size.    
-   double Macd[5],MacdSignal[5], MacdHist[5];
-   double Ma10[5], Ma20[5],Ma50[5];
-   double RSI[5], ADI[5], STO_K[5], BullPower[5], BearPower[5];
-   double Band1Upper[5], Band1Lower[5], Band2Upper[5], Band2Lower[5];
+   double Macd[6],MacdSignal[6], MacdHist[6];
+   double Ma10[6], Ma20[6],Ma50[6], Ma100[6], EMA20[6];
+   double RSI[6], ADI[6], STO_K[6], BullPower[6], BearPower[6];
+   double Band1Upper[6], Band1Lower[6], Band2Upper[6], Band2Lower[6];
+   ArrayInitialize(RSI,EMPTY_VALUE);
+   ArrayInitialize(ADI,EMPTY_VALUE);
+   ArrayInitialize(STO_K,EMPTY_VALUE);
+   ArrayInitialize(Ma10,EMPTY_VALUE);
+   ArrayInitialize(Ma20,EMPTY_VALUE);
+   ArrayInitialize(Ma50,EMPTY_VALUE);
+   ArrayInitialize(Macd,EMPTY_VALUE);
+   ArrayInitialize(MacdSignal,EMPTY_VALUE);
+   ArrayInitialize(Band1Lower,EMPTY_VALUE);
+   ArrayInitialize(Band1Upper,EMPTY_VALUE);
 
    //double StoBasePrevious, StoSignalPrevious;
    int    cnt,ticket,total;
@@ -98,7 +109,9 @@ void OnTick()
          MacdHist[i] = Macd[i] - MacdSignal[i];
          Ma10[i]=iMA(NULL,INDICATORTimeFrame,MAShort,0,MODE_SMA,PRICE_CLOSE,i);   
          Ma20[i]=iMA(NULL,INDICATORTimeFrame,MAMid,0,MODE_SMA,PRICE_CLOSE,i);
-         Ma50[i]=iMA(NULL,INDICATORTimeFrame,MALong,0,MODE_SMA,PRICE_CLOSE,i);   
+         Ma50[i]=iMA(NULL,INDICATORTimeFrame,MALong,0,MODE_SMA,PRICE_CLOSE,i); 
+         Ma100[i]=iMA(NULL,INDICATORTimeFrame,MALong,0,MODE_SMA,PRICE_CLOSE,i);
+         EMA20[i]=iMA(NULL,INDICATORTimeFrame,MALong,0,MODE_EMA,PRICE_CLOSE,i);  
          RSI[i] = iRSI(NULL, INDICATORTimeFrame, RSIPeriod, PRICE_CLOSE, i);
          ADI[i] = iADX(NULL, INDICATORTimeFrame, ADIPeriod, PRICE_CLOSE, 0, i);
          STO_K[i] = iStochastic(NULL, INDICATORTimeFrame, 5, 3, 3, MODE_SMA, 1, MODE_MAIN, i);
@@ -111,8 +124,8 @@ void OnTick()
      }
      
 
-   bool longconfident = LongConfident(RSI[0], ADI[0], STO_K[0], Ma10[0], Ma20[0],Ma50[0], Macd[0], MacdSignal[0]);
-   bool shortconfident = ShortConfident(RSI[0], ADI[0], STO_K[0], Ma10[0], Ma20[0],Ma50[0], Macd[0], MacdSignal[0]);  
+   //bool longconfident = LongConfident(RSI[0], ADI[0], STO_K[0], Ma10[0], Ma20[0],Ma50[0], Macd[0], MacdSignal[0]);
+   //bool shortconfident = ShortConfident(RSI[0], ADI[0], STO_K[0], Ma10[0], Ma20[0],Ma50[0], Macd[0], MacdSignal[0]);  
    total=OrdersTotal();
    
       if(total<MaxOpenPosition)
@@ -129,7 +142,7 @@ void OnTick()
       //--- check for long position (BUY) possibility
       //if(MacdCurrent<0 && MacdCurrent>SignalCurrent && MacdPrevious<SignalPrevious && 
       //   MathAbs(MacdCurrent)>(MACDOpenLevel*Point) && MaCurrent>MaPrevious)            
-      if (toLong(Band1Upper[0],Band1Upper[1], Band1Upper[2],Band2Upper[0],Band2Upper[1],Band2Upper[2],longconfident))
+      if (toLong(Macd, EMA20, Ma100))
         {
          Print("RSI is ", RSI[0]);
          Print("ADI is ", ADI[0]);
@@ -144,7 +157,7 @@ void OnTick()
          
          
          double sl = MathMax(iLow(NULL,0,2), Ask - StopLoss * Point);
-         ticket=OrderSend(Symbol(),OP_BUY,Lots, Ask, 3.0, sl ,Ask+TakeProfit*Point,"macd sample",16384,0,Green);
+         ticket=OrderSend(Symbol(),OP_BUY,Lots, Ask, 3.0, sl ,Ask+TakeProfit*Point,"Double MA",16384,0,Green);
          if(ticket>0)
            {
             if(OrderSelect(ticket,SELECT_BY_TICKET,MODE_TRADES))
@@ -157,10 +170,10 @@ void OnTick()
       //--- check for short position (SELL) possibility
       //if(MacdCurrent>0 && MacdCurrent<SignalCurrent && MacdPrevious>SignalPrevious && 
       //   MacdCurrent>(MACDOpenLevel*Point) && MaCurrent<MaPrevious)
-      if(toShort(Band1Lower[0],Band1Lower[1], Band1Lower[2],Band2Lower[0],Band2Lower[1],Band2Lower[2], shortconfident))  // Conservative when Short
+      if(toShort(Macd, EMA20, Ma100))  // Conservative when Short
         {
          double sl = MathMin(Band1Lower[2], Bid + StopLoss * Point * 0.5);
-         ticket=OrderSend(Symbol(),OP_SELL,Lots,Bid,3.0,sl, Bid-TakeProfit*Point*0.5,"macd sample",16384,0,Red);
+         ticket=OrderSend(Symbol(),OP_SELL,Lots,Bid,3.0,sl, Bid-TakeProfit*Point*0.5,"Double MA",16384,0,Red);
          if(ticket>0)
            {
             if(OrderSelect(ticket,SELECT_BY_TICKET,MODE_TRADES))
@@ -185,17 +198,6 @@ void OnTick()
          //--- long position is opened
          if(OrderType()==OP_BUY)
            {
-            //--- should it be closed?
-            //if(MacdCurrent>0 && MacdCurrent<SignalCurrent && MacdPrevious>SignalPrevious && 
-            //   MacdCurrent>(MACDCloseLevel*Point))
-            
-            if(toShort(Band1Lower[0],Band1Lower[1], Band1Lower[2],Band2Lower[0],Band2Lower[1],Band2Lower[2], longconfident))
-              {
-               //--- close order and exit
-               if(!OrderClose(OrderTicket(),OrderLots(),Bid,3,Violet))
-                  Print("OrderClose error ",GetLastError());
-               return;
-              }
             //--- check for trailing stop
             if(TrailingStop>0)
               {
@@ -213,16 +215,6 @@ void OnTick()
            }
          else // go to short position
            {
-            //--- should it be closed?
-            //if(MacdCurrent<0 && MacdCurrent>SignalCurrent && 
-            //   MacdPrevious<SignalPrevious && MathAbs(MacdCurrent)>(MACDCloseLevel*Point))
-            if (toLong(Band1Upper[0],Band1Upper[1], Band1Upper[2],Band2Upper[0],Band2Upper[1],Band2Upper[2],longconfident))            
-              {
-               //--- close order and exit
-               if(!OrderClose(OrderTicket(),OrderLots(),Ask,3,Violet))
-                  Print("OrderClose error ",GetLastError());
-               return;
-              }
             //--- check for trailing stop
             if(TrailingStop>0)
               {
@@ -290,20 +282,29 @@ bool RSI_sell(double rsi){
    //return false;
 }
 
-bool Macd_buy(double macd, double macdsignal){
-   return MathAbs(macd)>(MACDOpenLevel*Point) && macd > macdsignal;
+bool Macd_buy(double& macd[6]){
+   return macd[5] <= 0 && macd[0] > 0 && macd[1] > 0 && macd[2] > 0 && macd[3] > 0 && macd[4] > 0;    
 }
 
-bool Macd_sell(double macd, double macdsignal){
-   return macd < macdsignal;
+bool Macd_sell(double& macd[6]){
+    return macd[5] >= 0 && macd[0] < 0 && macd[1] < 0 && macd[2] < 0 && macd[3] < 0 && macd[4] < 0;
 }
 
-bool Ma_buy(double ma1, double ma2){
-   return ma1>ma2;
+bool Ma_buy(double& ma1[6], double& ma2[6]){
+   return (iClose(NULL, 0 , 0) > MathMax(ma1[0], ma2[0] + 15 * Point ) && iClose(NULL, 0 , 0) > ma1[0] && iClose(NULL, 0 , 0) > ma2[0])||   
+         (iClose(NULL, 0 , 1) > MathMax(ma1[1], ma2[1] + 15 * Point )&& iClose(NULL, 0 , 1) > ma1[1] && iClose(NULL, 0 , 1) > ma2[1]) ||
+         (iClose(NULL, 0 , 2) > MathMax(ma1[2], ma2[2] + 15 * Point )&& iClose(NULL, 0 , 2) > ma1[2] && iClose(NULL, 0 , 2) > ma2[2]) ||
+         (iClose(NULL, 0 , 3) > MathMax(ma1[3], ma2[3] + 15 * Point )&& iClose(NULL, 0 , 3) > ma1[3] && iClose(NULL, 0 , 3) > ma2[3]) ||
+         (iClose(NULL, 0 , 4) > MathMax(ma1[4], ma2[4] + 15 * Point )&& iClose(NULL, 0 , 4) > ma1[4] && iClose(NULL, 0 , 4) > ma2[4]) ;
 }
 
-bool Ma_sell(double ma1, double ma2){
-   return ma1<ma2;   
+bool Ma_sell(double& ma1[6], double& ma2[6]){
+   return (iClose(NULL, 0 , 0) < MathMax(ma1[0], ma2[0] - 15 * Point ) && iClose(NULL, 0 , 0) < ma1[0] && iClose(NULL, 0 , 0) < ma2[0])||   
+         (iClose(NULL, 0 , 1) < MathMax(ma1[1], ma2[1] + 15 * Point )&& iClose(NULL, 0 , 1) < ma1[1] && iClose(NULL, 0 , 1) < ma2[1]) ||
+         (iClose(NULL, 0 , 2) < MathMax(ma1[2], ma2[2] + 15 * Point )&& iClose(NULL, 0 , 2) < ma1[2] && iClose(NULL, 0 , 2) < ma2[2]) ||
+         (iClose(NULL, 0 , 3) < MathMax(ma1[3], ma2[3] + 15 * Point )&& iClose(NULL, 0 , 3) < ma1[3] && iClose(NULL, 0 , 3) < ma2[3]) ||
+         (iClose(NULL, 0 , 4) < MathMax(ma1[4], ma2[4] + 15 * Point )&& iClose(NULL, 0 , 4) < ma1[4] && iClose(NULL, 0 , 4) < ma2[4]) ;
+   
 }
 
 bool ADI_buy(double adi){
@@ -326,24 +327,24 @@ bool STO_sell(double sto){
 }
 
 
+
 bool LongConfident(double rsi, double adi, double sto, double mashort , double mamid, double malong, double macd, double macdsignal) {
-   
-   return RSI_buy(rsi) && ADI_buy(adi) && STO_buy(sto) && Ma_buy(mashort, mamid) && Ma_buy(mamid, malong) && Macd_buy(macd, macdsignal);
+   return true;   
+   //return RSI_buy(rsi) && ADI_buy(adi) && STO_buy(sto) && Ma_buy(mashort, mamid) && Ma_buy(mamid, malong) && Macd_buy(macd, macdsignal);
 
 }
 
 bool ShortConfident(double rsi, double adi, double sto, double mashort, double mamid, double malong, double macd, double macdsignal){
-   return RSI_sell(rsi) && ADI_sell(adi) && STO_sell(sto) && Ma_sell(mashort, mamid) && Ma_sell(mamid, malong) && Macd_sell(macd, macdsignal);
+   //return RSI_sell(rsi) && ADI_sell(adi) && STO_sell(sto) && Ma_sell(mashort, mamid) && Ma_sell(mamid, malong) && Macd_sell(macd, macdsignal);
+   return true;
 }
 
-bool toLong(double b1h_0, double b1h_1, double b1h_2, double b2h_0, double b2h_1, double b2h_2, bool confident){   
-   return (iClose(NULL,DDBTimeFrame,2) <= b1h_2 && iClose(NULL,DDBTimeFrame,1) > b1h_1 && (iClose(NULL,DDBTimeFrame,0) - b1h_0 >= 10 * Point) && 
-           iClose(NULL,DDBTimeFrame,1) < b2h_1 && iClose(NULL,DDBTimeFrame,0) < b2h_0  && 
-           confident);       
+
+bool toLong(double& macd[6], double& ema[6], double& ma[6]){
+   return Macd_buy(macd) && Ma_buy(ema, ma);   
+   
 }
 
-bool toShort(double b1l_0, double b1l_1, double b1l_2, double b2l_0, double b2l_1, double b2l_2, bool confident){
-   return (iClose(NULL,DDBTimeFrame,2) >= b1l_2 && iClose(NULL,DDBTimeFrame,1) < b1l_1 && (b1l_0 - iClose(NULL,DDBTimeFrame,0)>= 10 * Point) && 
-           iClose(NULL,DDBTimeFrame,1) > b2l_1 && iClose(NULL,DDBTimeFrame,0) > b2l_0 &&   
-           confident);   
+bool toShort(double& macd[6], double& ema[6], double& ma[6]){
+   return Macd_sell(macd) && Ma_sell(ema, ma);;
 }
