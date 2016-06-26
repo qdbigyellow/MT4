@@ -290,21 +290,30 @@ bool Macd_sell(double& macd[6]){
     return macd[5] >= 0 && macd[0] < 0 && macd[1] < 0 && macd[2] < 0 && macd[3] < 0 && macd[4] < 0;
 }
 
-bool Ma_buy(double& ma1[6], double& ma2[6]){
-   return (iClose(NULL, 0 , 0) > MathMax(ma1[0], ma2[0] + 15 * Point ) && iClose(NULL, 0 , 0) > ma1[0] && iClose(NULL, 0 , 0) > ma2[0])||   
-         (iClose(NULL, 0 , 1) > MathMax(ma1[1], ma2[1] + 15 * Point )&& iClose(NULL, 0 , 1) > ma1[1] && iClose(NULL, 0 , 1) > ma2[1]) ||
-         (iClose(NULL, 0 , 2) > MathMax(ma1[2], ma2[2] + 15 * Point )&& iClose(NULL, 0 , 2) > ma1[2] && iClose(NULL, 0 , 2) > ma2[2]) ||
-         (iClose(NULL, 0 , 3) > MathMax(ma1[3], ma2[3] + 15 * Point )&& iClose(NULL, 0 , 3) > ma1[3] && iClose(NULL, 0 , 3) > ma2[3]) ||
-         (iClose(NULL, 0 , 4) > MathMax(ma1[4], ma2[4] + 15 * Point )&& iClose(NULL, 0 , 4) > ma1[4] && iClose(NULL, 0 , 4) > ma2[4]) ;
+bool Ma_buy(double& ma1[6], double& ma2[6]) {
+   return ((iClose(NULL, 0 , 0) > MathMax(ma1[0], ma2[0] + 15 * Point )) ||
+          (iClose(NULL, 0 , 1) > MathMax(ma1[1], ma2[1] + 15 * Point )) || 
+          (iClose(NULL, 0 , 2) > MathMax(ma1[2], ma2[2] + 15 * Point )) || 
+          (iClose(NULL, 0 , 3) > MathMax(ma1[3], ma2[3] + 15 * Point )) ||
+          (iClose(NULL, 0 , 4) > MathMax(ma1[4], ma2[4] + 15 * Point ))) && 
+          (iClose(NULL, 0 , 0) > ma1[0] && iClose(NULL, 0 , 0) > ma2[0] &&
+           iClose(NULL, 0 , 1) > ma1[1] && iClose(NULL, 0 , 1) > ma2[1] && 
+           iClose(NULL, 0 , 2) > ma1[2] && iClose(NULL, 0 , 2) > ma2[2] && 
+           iClose(NULL, 0 , 3) > ma1[3] && iClose(NULL, 0 , 3) > ma2[3] &&  
+           iClose(NULL, 0 , 4) > ma1[4] && iClose(NULL, 0 , 4) > ma2[4] );
 }
 
 bool Ma_sell(double& ma1[6], double& ma2[6]){
-   return (iClose(NULL, 0 , 0) < MathMax(ma1[0], ma2[0] - 15 * Point ) && iClose(NULL, 0 , 0) < ma1[0] && iClose(NULL, 0 , 0) < ma2[0])||   
-         (iClose(NULL, 0 , 1) < MathMax(ma1[1], ma2[1] + 15 * Point )&& iClose(NULL, 0 , 1) < ma1[1] && iClose(NULL, 0 , 1) < ma2[1]) ||
-         (iClose(NULL, 0 , 2) < MathMax(ma1[2], ma2[2] + 15 * Point )&& iClose(NULL, 0 , 2) < ma1[2] && iClose(NULL, 0 , 2) < ma2[2]) ||
-         (iClose(NULL, 0 , 3) < MathMax(ma1[3], ma2[3] + 15 * Point )&& iClose(NULL, 0 , 3) < ma1[3] && iClose(NULL, 0 , 3) < ma2[3]) ||
-         (iClose(NULL, 0 , 4) < MathMax(ma1[4], ma2[4] + 15 * Point )&& iClose(NULL, 0 , 4) < ma1[4] && iClose(NULL, 0 , 4) < ma2[4]) ;
-   
+   return ((iClose(NULL, 0 , 0) < MathMax(ma1[0], ma2[0] - 15 * Point)) ||
+          (iClose(NULL, 0 , 1) < MathMax(ma1[1], ma2[1] + 15 * Point)) ||
+          (iClose(NULL, 0 , 2) < MathMax(ma1[2], ma2[2] + 15 * Point)) ||
+          (iClose(NULL, 0 , 3) < MathMax(ma1[3], ma2[3] + 15 * Point)) ||
+          (iClose(NULL, 0 , 4) < MathMax(ma1[4], ma2[4] + 15 * Point))) && 
+          ( iClose(NULL, 0 , 0) < ma1[0] && iClose(NULL, 0 , 0) < ma2[0] && 
+            iClose(NULL, 0 , 1) < ma1[1] && iClose(NULL, 0 , 1) < ma2[1] &&
+            iClose(NULL, 0 , 2) < ma1[2] && iClose(NULL, 0 , 2) < ma2[2] &&
+            iClose(NULL, 0 , 3) < ma1[3] && iClose(NULL, 0 , 3) < ma2[3] &&
+            iClose(NULL, 0 , 4) < ma1[4] && iClose(NULL, 0 , 4) < ma2[4]);
 }
 
 bool ADI_buy(double adi){
