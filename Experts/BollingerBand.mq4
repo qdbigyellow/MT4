@@ -37,8 +37,8 @@ input int      KPeriod = 5;
 input int      DPeriod = 3;
 input int      JPeriod = 3;
 input int      PowerPeriod = 13;
-input int      DDBTimeFrame = PERIOD_H1;
-input int      INDICATORTimeFrame = PERIOD_H1;
+input int      DDBTimeFrame = PERIOD_D1;
+input int      INDICATORTimeFrame = PERIOD_D1;
 input int      INDICATORPeriod = 5;
 
 //+------------------------------------------------------------------+
