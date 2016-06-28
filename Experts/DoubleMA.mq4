@@ -18,10 +18,10 @@
 #property version   "1.00"
 #property strict
 //--- input parameters
-input double   TakeProfit=120.0;
+input double   TakeProfit=35.0;
 input double   Lots=0.1;
-input double   TrailingStop=20.0;
-input double   StopLoss = 70.0;
+input double   TrailingStop=10.0;
+input double   StopLoss = 15.0;
 input int      MaxOpenPosition = 1;
 input double   MACDOpenLevel=3.0;
 input double   MACDCloseLevel=2.0;
@@ -38,8 +38,8 @@ input int      KPeriod = 5;
 input int      DPeriod = 3;
 input int      JPeriod = 3;
 input int      PowerPeriod = 13;
-input int      DDBTimeFrame = PERIOD_H1;
-input int      INDICATORTimeFrame = PERIOD_H1;
+input int      DDBTimeFrame = PERIOD_M30;
+input int      INDICATORTimeFrame = PERIOD_M15;
 input int      INDICATORPeriod = 6;
 
 //+------------------------------------------------------------------+
@@ -156,7 +156,7 @@ void OnTick()
          Print("Bear Power is ", BearPower[0]);
          
          
-         double sl = MathMax(iLow(NULL,0,2), Ask - StopLoss * Point);
+         double sl = MathMax(iLow(NULL,INDICATORTimeFrame,2), Ask - StopLoss * Point);
          ticket=OrderSend(Symbol(),OP_BUY,Lots, Ask, 3.0, sl ,Ask+TakeProfit*Point,"Double MA",16384,0,Green);
          if(ticket>0)
            {
@@ -172,7 +172,7 @@ void OnTick()
       //   MacdCurrent>(MACDOpenLevel*Point) && MaCurrent<MaPrevious)
       if(toShort(Macd, EMA20, Ma100))  // Conservative when Short
         {
-         double sl = MathMin(Band1Lower[2], Bid + StopLoss * Point * 0.5);
+         double sl = MathMin(iHigh(NULL,INDICATORTimeFrame,2), Bid + StopLoss * Point * 0.5);
          ticket=OrderSend(Symbol(),OP_SELL,Lots,Bid,3.0,sl, Bid-TakeProfit*Point*0.5,"Double MA",16384,0,Red);
          if(ticket>0)
            {
@@ -283,7 +283,8 @@ bool RSI_sell(double rsi){
 }
 
 bool Macd_buy(double& macd[6]){
-   return macd[5] <= 0 && macd[0] > 0 && macd[1] > 0 && macd[2] > 0 && macd[3] > 0 && macd[4] > 0;    
+   //return macd[5] <= 0 && macd[0] > 0 && macd[1] > 0 && macd[2] > 0 && macd[3] > 0 && macd[4] > 0 && (macd[0] > macd[1] >macd[2] >macd[3]> macd[4]);    
+   return macd[5] <= 0 && macd[4] > 0 && (macd[0] > macd[1] >macd[2] >macd[3]> macd[4]);    
 }
 
 bool Macd_sell(double& macd[6]){
@@ -338,14 +339,14 @@ bool STO_sell(double sto){
 
 
 bool LongConfident(double rsi, double adi, double sto, double mashort , double mamid, double malong, double macd, double macdsignal) {
-   return true;   
+   return false;   
    //return RSI_buy(rsi) && ADI_buy(adi) && STO_buy(sto) && Ma_buy(mashort, mamid) && Ma_buy(mamid, malong) && Macd_buy(macd, macdsignal);
 
 }
 
 bool ShortConfident(double rsi, double adi, double sto, double mashort, double mamid, double malong, double macd, double macdsignal){
    //return RSI_sell(rsi) && ADI_sell(adi) && STO_sell(sto) && Ma_sell(mashort, mamid) && Ma_sell(mamid, malong) && Macd_sell(macd, macdsignal);
-   return true;
+   return false;
 }
 
 
@@ -355,5 +356,5 @@ bool toLong(double& macd[6], double& ema[6], double& ma[6]){
 }
 
 bool toShort(double& macd[6], double& ema[6], double& ma[6]){
-   return Macd_sell(macd) && Ma_sell(ema, ma);;
+   return Macd_sell(macd) && Ma_sell(ema, ma) && false;
 }
