@@ -18,10 +18,10 @@
 #property version   "1.00"
 #property strict
 //--- input parameters
-input double   TakeProfit=35.0;
+input double   TakeProfit=40.0;
 input double   Lots=0.1;
 input double   TrailingStop=10.0;
-input double   StopLoss = 15.0;
+input double   StopLoss = 20.0;
 input int      MaxOpenPosition = 1;
 input double   MACDOpenLevel=3.0;
 input double   MACDCloseLevel=2.0;
